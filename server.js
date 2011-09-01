@@ -1,32 +1,40 @@
 var dhcp = require('dhcp'),
     server = dhcp.createServer('udp4');
+    
+var config = {
+  listen: ['10.10.10.1']
+}
 
 server.discover(function(packet, ip) {
   return {
-    yiaddr: ip,
+    yiaddr: ip || '10.20.30.40',
+    siaddr: '10.10.10.198',
     options: {
       1: '255.255.255.0',
-      3: '192.168.1.1'
+      3: '192.168.1.1',
+      51: 36400
     }
   };
 });
 server.request(function(packet, ip) {
   return {
     yiaddr: ip,
+    siaddr: '10.10.10.198',
     options: {
       1: '255.255.255.0',
-      3: '192.168.1.1'
+      3: '192.168.1.1',
+      51: 36400
     }
   };
 });
 server.decline(function(packet) {
-  return [];
+  return {};
 });
 server.release(function(packet) {
-  return [];
+  return {};
 });
 server.inform(function(packet) {
-  return [];
+  return {};
 });
 
 server.on('discover', function(packet) {
@@ -42,6 +50,14 @@ server.on('offerSent', function(bytes, packet) {
 server.on('request', function(packet) {
   console.log('- request -', packet);
 });
+server.on('ackError', function(err, packet) {
+  console.log('ackError', err, (packet));
+});
+server.on('ackSent', function(bytes, packet) {
+  console.log('ackSent');
+});
+
+
 server.on('decline', function(packet) {
   console.log('- decline -', packet);
 });
@@ -71,4 +87,4 @@ server.on("listening", function () {
       address.address + ":" + address.port);
 });
 
-server.bind(67);
+server.bind(67); //, '10.10.10.198');
