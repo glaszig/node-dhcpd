@@ -7,11 +7,12 @@ var config = {
 
 server.discover(function(packet, ip) {
   return {
-    yiaddr: ip || '10.20.30.40',
+    yiaddr: ip || '192.168.1.23',
     siaddr: '10.10.10.198',
     options: {
       1: '255.255.255.0',
       3: '192.168.1.1',
+      28: '192.168.1.255',
       51: 36400
     }
   };
@@ -23,6 +24,7 @@ server.request(function(packet, ip) {
     options: {
       1: '255.255.255.0',
       3: '192.168.1.1',
+      28: '192.168.1.255',
       51: 36400
     }
   };
