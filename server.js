@@ -1,13 +1,32 @@
 var dhcp = require('dhcp'),
-    server = dhcp.createServer('udp4');
+    server = dhcp.createServer('udp4'),
+    sqlite3 = require('sqlite3'),
+    db = new sqlite3.Database(':memory:');
     
 var config = {
   listen: ['10.10.10.1']
 }
 
+db.serialize(function() {
+  db.run('CREATE TABLE requests ('+
+    'xid integer,'+
+    'req_ip varchar(15),'+
+    'created_at datetime,'+
+    'primary key (xid)'+
+  ')');
+});
+
 server.discover(function(packet, ip) {
+  ip = ip || '192.168.1.23';
+  var q = db.run(
+    'INSERT INTO requests (xid, req_ip, created_at) VALUES (?, ?, ?)',
+    [packet.xid, ip, new Date]
+  );
+  db.each('SELECT * FROM requests', function(err, row) {
+    console.log(row);
+  });
   return {
-    yiaddr: ip || '192.168.1.23',
+    yiaddr: ip,
     siaddr: '10.10.10.198',
     options: {
       1: '255.255.255.0',
