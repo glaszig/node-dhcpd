@@ -10,6 +10,7 @@ var config = {
 db.serialize(function() {
   db.run('CREATE TABLE requests ('+
     'xid integer,'+
+    'chaddr varchar(255),'+
     'req_ip varchar(15),'+
     'created_at text,'+
     'primary key (xid)'+
@@ -21,8 +22,8 @@ server.on('discover', function(packet, ip) {
   // http://technet.microsoft.com/en-us/library/cc958935.aspx
   ip = ip || '192.168.1.23';
   var q = db.run(
-    "INSERT INTO requests (xid, req_ip, created_at) VALUES (?, ?, datetime('now'))",
-    packet.xid, ip
+    "INSERT INTO requests (xid, chaddr, req_ip, created_at) VALUES (?, ?, datetime('now'))",
+    packet.xid, packet.chaddr, ip
   );
   db.each("SELECT xid, req_ip, created_at FROM requests", function(err, row) {
     console.log(row);
@@ -48,12 +49,17 @@ server.on('request', function(packet, ip) {
   // after 50% of the lease time passed.
   // 
   // http://technet.microsoft.com/en-us/library/cc958935.aspx
+  
+  // if we'll receive a request from a client
+  // which sent a discover before but the xid
+  // does not match, discard the offer we sent
+  db.run("DELETE FROM requests WHERE chaddr = ? AND xid != ?", packet.chaddr, packet.xid);
+  
+  // now we move on with serving the request
   util.log('  looking up offered ip for xid '+packet.xid);
   db.get('SELECT req_ip FROM requests WHERE xid = ?', packet.xid, function(err, row) {
-    if (err) {
-      util.log('  '+err);
-      // server.nak(packet);
-    } else {
+    // found a matching offer, send ack
+    if (row)
       server.ack(packet, {
         yiaddr: row.req_ip,
         siaddr: '10.10.10.198',
