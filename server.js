@@ -59,7 +59,7 @@ server.on('request', function(packet, ip) {
   util.log('  looking up offered ip for xid '+packet.xid);
   db.get('SELECT req_ip FROM requests WHERE xid = ?', packet.xid, function(err, row) {
     // found a matching offer, send ack
-    if (row)
+    if (row) {
       server.ack(packet, {
         yiaddr: row.req_ip,
         siaddr: '10.10.10.198',
