@@ -1,4 +1,5 @@
-var dhcp = require('dhcp'),
+var util = require('util'),
+    dhcp = require('dhcp'),
     server = dhcp.createServer('udp4'),
     sqlite3 = require('sqlite3'),
     db = new sqlite3.Database(':memory:');
