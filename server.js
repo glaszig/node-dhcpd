@@ -1,17 +1,81 @@
-var dhcp = require('dhcp'),
+var util = require('util'),
+    dhcp = require('dhcp'),
     server = dhcp.createServer('udp4'),
-    sqlite3 = require('sqlite3'),
+    sqlite3 = require('sqlite3').verbose(),
     db = new sqlite3.Database(':memory:');
+
+Object.defineProperty(Object.prototype, "extend", {
+    enumerable: false,
+    value: function(from) {
+        var props = Object.getOwnPropertyNames(from);
+        var dest = this;
+        props.forEach(function(name) {
+            if (name in dest) {
+                var destination = Object.getOwnPropertyDescriptor(from, name);
+                Object.defineProperty(dest, name, destination);
+            }
+        });
+        return this;
+    }
+});
     
 var config = {
-  listen: ['10.10.10.1']
+  "leaseTime": 36400,
+  "subnets": [{
+    "range": ["192.168.11.10", "192.168.11.20"],
+    "subnetMask": "255.255.255.0",
+    "routers": ["192.168.11.1", "10.10.10.1"],
+    "nameServers": ["192.168.11.1", "10.10.10.1", "10.10.20.1"],
+    "broadcast": "192.168.11.255"
+  }]
+};
+
+var applyDefaultsToSubnet = function(subnet) {
+  for (var p in config) {
+    if (typeof config[p] != 'object' && !subnet[p])
+      subnet[p] = config[p];
+  }
+  return subnet;
 }
+
+var findSubnetForIp = function(ip) {
+  var returnSubnet = null, re = /\./g;
+  ip = parseInt(ip.replace(re, ''));
+  
+  config.subnets.forEach(function(subnet) {
+    var from = parseInt(subnet.range[0].replace(re, '')),
+        to = parseInt(subnet.range[1].replace(re, ''));
+    if (ip >= from && ip <= to) {
+      returnSubnet = subnet;
+    }
+  });
+  
+  return returnSubnet ? applyDefaultsToSubnet(returnSubnet) : returnSubnet;
+};
+
+var randomIpInRange = function(range) {
+  var re = /\./g, rand = function(min, max) {
+  	var args = arguments.length;  
+  	if (args === 0) {
+  		min = 0;
+  		max = 32768;
+    }
+    return Math.floor( Math.random() * (max - min + 1) ) + min;
+  },
+  min = parseInt(range[0].replace(re, '')),
+  max = parseInt(range[1].replace(re, ''));
+  max = max - min,
+  lastByte = rand(0, max);
+  return range[0].replace(/\d+$/, lastByte);
+}
+
+console.log(findSubnetForIp('192.168.11.10'));
 
 db.serialize(function() {
   db.run('CREATE TABLE requests ('+
     'xid integer,'+
     'chaddr varchar(255),'+
-    'req_ip varchar(15),'+
+    'ip_address varchar(15),'+
     'created_at text,'+
     'primary key (xid)'+
   ')');
@@ -20,22 +84,28 @@ db.serialize(function() {
 server.on('discover', function(packet, ip) {
   // initialization state
   // http://technet.microsoft.com/en-us/library/cc958935.aspx
-  ip = ip || '192.168.1.23';
-  var q = db.run(
-    "INSERT INTO requests (xid, chaddr, req_ip, created_at) VALUES (?, ?, datetime('now'))",
-    packet.xid, packet.chaddr, ip
-  );
-  db.each("SELECT xid, req_ip, created_at FROM requests", function(err, row) {
-    console.log(row);
+  var subnet = config.subnets[0];
+  ip = ip || randomIpInRange(subnet.range);
+  
+  db.serialize(function() {
+    db.run(
+      "INSERT INTO requests (xid, chaddr, ip_address, created_at) VALUES (?, ?, ?, datetime('now'))",
+      packet.xid, packet.chaddr, ip,
+      function(err, row) {}
+    );
+    // db.each("SELECT * FROM requests", function(err, row) {
+    //   console.log(row);
+    // });
   });
+  
   server.offer(packet, {
     yiaddr: ip,
-    siaddr: '10.10.10.198',
+    siaddr: '10.10.20.10',
     options: {
-      1: '255.255.255.0',
-      3: '192.168.1.1',
-      28: '192.168.1.255',
-      51: 36400
+      1: subnet.subnetMask,
+      3: subnet.routers,
+      28: subnet.broadcast,
+      51: subnet.leaseTime
     }
   });
 });
@@ -49,28 +119,47 @@ server.on('request', function(packet, ip) {
   // after 50% of the lease time passed.
   // 
   // http://technet.microsoft.com/en-us/library/cc958935.aspx
+  db.serialize(function() {
+    // if we'll receive a request from a client
+    // which sent a discover before but the xid
+    // does not match, discard the offer we sent
+    db.run("DELETE FROM requests WHERE chaddr = ? AND xid != ?", packet.chaddr, packet.xid);
   
-  // if we'll receive a request from a client
-  // which sent a discover before but the xid
-  // does not match, discard the offer we sent
-  db.run("DELETE FROM requests WHERE chaddr = ? AND xid != ?", packet.chaddr, packet.xid);
-  
-  // now we move on with serving the request
-  util.log('  looking up offered ip for xid '+packet.xid);
-  db.get('SELECT req_ip FROM requests WHERE xid = ?', packet.xid, function(err, row) {
-    // found a matching offer, send ack
-    if (row) {
-      server.ack(packet, {
-        yiaddr: row.req_ip,
-        siaddr: '10.10.10.198',
-        options: {
-          1: '255.255.255.0',
-          3: '192.168.1.1',
-          28: '192.168.1.255',
-          51: 36400
-        }
-      });
-    }
+    // now we move on with serving the request
+    db.get('SELECT ip_address FROM requests WHERE xid = ?', packet.xid, function(err, row) {
+      // found a matching offer, send ack
+      if (row) {
+        util.log('  found offered ip for xid ' + packet.xid);
+        var subnet = findSubnetForIp(row.ip_address),
+            params = {
+              yiaddr: row.ip_address,
+              siaddr: '10.10.10.198',
+              options: {
+                1: subnet.subnetMask,
+                3: subnet.routers,
+                28: subnet.broadcast,
+                51: subnet.leaseTime
+              }
+            };
+      } else {
+        util.log('  could not find ip for xid ' + packet.xid);
+        var subnet = findSubnetForIp(ip);
+        if (!subnet) subnet = findSubnetForIp(packet.ciaddr);
+        var params = {
+          yiaddr: row.ip_address,
+          siaddr: '10.10.10.198',
+          options: {
+            1: subnet.subnetMask,
+            3: subnet.routers,
+            28: subnet.broadcast,
+            51: subnet.leaseTime
+          }
+        };
+      }
+      
+      server.ack(packet, params);
+      
+    });
   });
   
 });
@@ -91,8 +180,9 @@ server.on('offer', function(packet) {
   console.log('- offer packet->buffer -', buffer.length, buffer);
   console.log('- offer buffer->packet -', dhcp.Packet.fromBuffer(buffer));
 });
-server.on('offerError', function(err, packet) {
-  console.log('offerError', err, (packet));
+server.on('offerError', function(e, packet) {
+  util.log('OFFER ERROR: '+e.code+': '+e.message);
+  // console.log('offerError', err, (packet));
 });
 server.on('offerSent', function(bytes, packet) {
   console.log('offerSent');
