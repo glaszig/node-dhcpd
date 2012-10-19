@@ -1,1 +1,3 @@
-output.txt
+/tmp
+node_modules
+*.bkp
