@@ -1,32 +1,29 @@
-sprintf = require('./../support/sprintf')
-converters = require('./converters')
-utils = require('./utils')
+sprintf    = require './../support/sprintf'
+converters = require './converters'
+utils      = require './utils'
+iputils    = require './iputils'
 
-extractChaddr = (b) -> 
-  [f, len, reg] = ["%02x", b[2], []]
-  bytes = b.slice(28, 28+len)
-  (sprintf(f, byte) for byte in bytes).join ':'
+String::stripBinNull = ->
+  pos = @indexOf '\u0000'
+  if pos == -1 then @ else @substr 0, pos
 
 fromBuffer = (b) ->
   ret =
     op: b[0]
     htype: b[1]
-    hlen: b[2]
-    hops: b[3]
-    xid: utils.readInt32(b, 4) # b[4] + b[5] + b[6] + b[7];
-    secs: utils.readInt16(b, 8) # b[8] + b[9];
-    flags: utils.readInt16(b, 10) # b[10] + b[11];
-    ciaddr: sprintf('%d.%d.%d.%d', b[12], b[13], b[14], b[15])
-    yiaddr: sprintf('%d.%d.%d.%d', b[16], b[17], b[18], b[19])
-    siaddr: sprintf('%d.%d.%d.%d', b[20], b[21], b[22], b[23])
-    giaddr: sprintf('%d.%d.%d.%d', b[24], b[25], b[26], b[27])
-    chaddr: extractChaddr(b)
-    sname: ''
-    file: ''
+    hlen: b.readUInt8 2
+    hops: b.readUInt8 3
+    xid: b.readUInt32BE 4 # 4 bytes
+    secs: b.readUInt16BE 8 # 2 bytes
+    flags: b.readUInt16BE 10 # 2 bytes
+    ciaddr: iputils.readIP b, 12
+    yiaddr: iputils.readIP b, 16
+    siaddr: iputils.readIP b, 20
+    giaddr: iputils.readIP b, 24
+    chaddr: iputils.readMacAddress b, 28
+    sname: b.toString('ascii', 44, 108).stripBinNull()
+    file: b.toString('ascii', 108, 236).stripBinNull()
     options: {}
-
-  ret.sname = (byte for byte in b.slice 44, 44+64).join ''
-  ret.file = (byte for byte in b.slice 108, 236).join ''
 
   [i, options] = [0, b.slice(240)]
   while i < options.length and options[i] != 255
@@ -39,33 +36,30 @@ fromBuffer = (b) ->
   ret
 
 toBuffer = (data) ->
-  buffer = []
+  buffer = new Buffer 512, 'ascii'
   pos = 0
   buffer[pos++] = data.op
   buffer[pos++] = data.htype
-  buffer[pos++] = data.hlen
-  buffer[pos++] = data.hops
-  utils.writeInt32 buffer, data.xid, pos
-  pos += 4
-  utils.writeInt16 buffer, data.secs, pos
-  pos += 2
-  utils.writeInt16 buffer, data.flags, pos
-  pos += 2
+  buffer.writeUInt8 data.hlen, 2
+  buffer.writeUInt8 data.hops, 3
+  buffer.writeUInt32BE data.xid, 4
+  buffer.writeUInt16BE data.secs, 8
+  buffer.writeUInt16BE data.flags, 10
+  
+  pos = 12
   ["ciaddr", "yiaddr", "siaddr", "giaddr"].forEach (key) ->
     (data[key] or "0.0.0.0").split(".").forEach (item) ->
-      buffer[pos++] = parseInt(item)
+      buffer.writeUInt8 parseInt(item, 10), pos++
 
-  data.chaddr.split(":").forEach (item) ->
-    buffer[pos++] = parseInt(item, 16)
+  for hex in data.chaddr.split ':'
+    buffer[pos++] = parseInt hex, 16
   
   # fill bootp range with zeros
-  buffer[pos++] = 0  while pos < 236
+  buffer.fill(0, pos, 235)
   
   # magic cookie
-  buffer[pos++] = 99
-  buffer[pos++] = 130
-  buffer[pos++] = 83
-  buffer[pos++] = 99
+  pos = 236
+  buffer[pos++] = i for i in [99, 130, 83, 99]
   
   # dhcp options payload starts at byte 240
   pos = 240
@@ -77,12 +71,17 @@ toBuffer = (data) ->
   buffer[pos] = 255
   
   # return a node buffer
-  new Buffer(buffer, "ascii")
+  padded = new Buffer pos, 'ascii'
+  buffer.copy padded, 0, 0, pos
+  padded
 
 
 class Packet
   @fromBuffer: fromBuffer
   toBuffer: toBuffer
+  constructor: (array) ->
+    @[key] = array[key] for key of array
+
   op:       (@op)     -> this
   htype:    (@htype)  -> this
   hlen:     (@hlen)   -> this
@@ -96,6 +95,8 @@ class Packet
   giaddr:   (@giaddr = '0.0.0.0') -> this
   chaddr:   (@chaddr) -> this
   sname:    (@sname)  -> this
+  file:     (@file)   -> this
+  options:  (@options)-> this
 
 module.exports =
   Packet: Packet
