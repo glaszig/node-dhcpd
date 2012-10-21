@@ -83,11 +83,8 @@ db.serialize(function() {
 });
 
 server.on('message', function(data) {
-  console.log('-- foo --');
-  console.log(data);
   fs.writeFileSync(__dirname + '/log/request.bin', data);
-  var buf = fs.readFileSync(__dirname + '/log/request.bin');
-  console.log(buf);
+  // var buf = fs.readFileSync(__dirname + '/log/request.bin');
 });
 
 server.on('discover', function(packet, ip) {
