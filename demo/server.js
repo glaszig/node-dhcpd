@@ -185,7 +185,7 @@ server.on('inform', function(packet) {
 
 server.on('offer', function(packet) {
   console.log('- offer -', packet);
-  var buffer = dhcp.Packet.toBuffer(packet);
+  var buffer = packet.toBuffer();
   console.log('- offer packet->buffer -', buffer.length, buffer);
   console.log('- offer buffer->packet -', dhcp.Packet.fromBuffer(buffer));
 });
@@ -200,7 +200,7 @@ server.on('offerSent', function(bytes, packet) {
 
 server.on('ack', function(packet) {
   console.log('- ack -', packet);
-  var buffer = dhcp.Packet.toBuffer(packet);
+  var buffer = packet.toBuffer();
   console.log('- ack packet->buffer -', buffer.length, buffer);
   console.log('- ack buffer->packet -', dhcp.Packet.fromBuffer(buffer));
 });
