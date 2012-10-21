@@ -12,14 +12,14 @@ class Server extends Socket
 			if packet.op == 1
 				type =
 					id: packet.options[53] || 0
-					name: dhcp.MessageTypes[type_id]
+					name: dhcp.MessageTypes[(packet.options[53] || 0)]
 
 				util.log "Got #{type.name} from #{remote.address}:" +
 					" #{remote.port} (#{packet.chaddr}) " +
 					" with packet length of #{buffer.length} bytes"
 
 				event_name = type.name.replace('DHCP', '').toLowerCase()
-				@handle event_name, packet
+				@_emitPacket event_name, packet
 			else
 				console.log "  Unsupported message format"
 
@@ -41,8 +41,8 @@ class Server extends Socket
 			else
 				@emit "#{event_name}Sent", bytes, packet
 
-	_handle: (message_type, packet) ->
-		@emit.emit message_type, packet, packet.options[50] || null
+	_emitPacket: (message_type, packet) ->
+		@emit message_type, packet, packet.options[50] || null
 
 	offer: (packet, params) ->
 		if params

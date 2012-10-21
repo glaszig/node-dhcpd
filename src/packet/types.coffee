@@ -1,4 +1,4 @@
-module.exports =
+module.exports = [
 	"unknown dhcp message type"
 	"DHCPDISCOVER" # 1
 	"DHCPOFFER" # 2
@@ -8,3 +8,4 @@ module.exports =
 	"DHCPNAK" # 6
 	"DHCPRELEASE" # 7
 	"DHCPINFORM" # 8
+]

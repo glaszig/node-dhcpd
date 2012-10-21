@@ -5,7 +5,7 @@ utils = require('./utils')
 extractChaddr = (b) -> 
   [f, len, reg] = ["%02x", b[2], []]
   bytes = b.slice(28, 28+len)
-  (sprintf(f, octet) for byte in bytes).join ':'
+  (sprintf(f, byte) for byte in bytes).join ':'
 
 fromBuffer = (b) ->
   ret =
@@ -22,15 +22,17 @@ fromBuffer = (b) ->
     giaddr: sprintf('%d.%d.%d.%d', b[24], b[25], b[26], b[27])
     chaddr: extractChaddr(b)
     sname: ''
+    file: ''
+    options: {}
 
-  ret.sname = (s for b in b.slice 44, 44+64).join ''
-  ret.file = (s for b in b.slice 108, 236).join ''
+  ret.sname = (byte for byte in b.slice 44, 44+64).join ''
+  ret.file = (byte for byte in b.slice 108, 236).join ''
 
   [i, options] = [0, b.slice(240)]
   while i < options.length and options[i] != 255
     optNum = parseInt options[i++], 10
     optLen = parseInt options[i++], 10
-    optVal = converters(opt).decode(options.slice(i, i+optLen))
+    optVal = converters(optNum).decode(options.slice(i, i+optLen))
     ret.options[optNum] = optVal
     i += optLen
 

@@ -1,4 +1,4 @@
-module.exports =
+module.exports = [
   "pad" # 0
   "Subnet mask" # 1
   "Time offset" # 2
@@ -255,3 +255,4 @@ module.exports =
   "???" # 253
   "???" # 254
   "End" # 255
+]
