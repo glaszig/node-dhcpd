@@ -14,8 +14,8 @@ class DHCPServer extends Socket
 					id: packet.options[53] || 0
 					name: dhcp.MessageTypes[(packet.options[53] || 0)]
 
-				util.log "Got #{type.name} from #{remote.address}:" +
-					" #{remote.port} (#{packet.chaddr}) " +
+				util.log "Got #{type.name} from" +
+					" #{remote.address}:#{remote.port} (#{packet.chaddr}) " +
 					" with packet length of #{buffer.length} bytes"
 
 				event_name = type.name.replace('DHCP', '').toLowerCase()

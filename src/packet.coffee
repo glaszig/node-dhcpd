@@ -36,9 +36,9 @@ fromBuffer = (b) ->
 
 toBuffer = () ->
   buffer = new Buffer 512, 'ascii'
-  pos = 0
-  buffer[pos++] = @op
-  buffer[pos++] = @htype
+
+  buffer[0] = @op
+  buffer[1] = @htype
   buffer.writeUInt8 @hlen, 2
   buffer.writeUInt8 @hops, 3
   buffer.writeUInt32BE @xid, 4
@@ -82,6 +82,10 @@ class Packet
     @[key] = array[key] for key of array
 
   toBuffer: toBuffer
+
+  getRequestedIPAddress: ->
+    @options[50]
+
   op:       (@op)     -> this
   htype:    (@htype)  -> this
   hlen:     (@hlen)   -> this
