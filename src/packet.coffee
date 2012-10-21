@@ -99,4 +99,3 @@ module.exports =
   Packet: Packet
   fromBuffer: fromBuffer
   toBuffer: toBuffer
-
