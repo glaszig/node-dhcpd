@@ -1,7 +1,6 @@
 sprintf    = require './../support/sprintf'
-converters = require './converters'
 utils      = require './utils'
-iputils    = require './iputils'
+Converters = require './packet/converters'
 
 String::stripBinNull = ->
   pos = @indexOf '\u0000'
@@ -16,11 +15,11 @@ fromBuffer = (b) ->
     xid: b.readUInt32BE 4 # 4 bytes
     secs: b.readUInt16BE 8 # 2 bytes
     flags: b.readUInt16BE 10 # 2 bytes
-    ciaddr: iputils.readIP b, 12
-    yiaddr: iputils.readIP b, 16
-    siaddr: iputils.readIP b, 20
-    giaddr: iputils.readIP b, 24
-    chaddr: iputils.readMacAddress b, 28
+    ciaddr: utils.readIp b, 12
+    yiaddr: utils.readIp b, 16
+    siaddr: utils.readIp b, 20
+    giaddr: utils.readIp b, 24
+    chaddr: utils.readMacAddress b.slice(28, 28+b.readUInt8(2))
     sname: b.toString('ascii', 44, 108).stripBinNull()
     file: b.toString('ascii', 108, 236).stripBinNull()
     options: {}
@@ -29,33 +28,34 @@ fromBuffer = (b) ->
   while i < options.length and options[i] != 255
     optNum = parseInt options[i++], 10
     optLen = parseInt options[i++], 10
-    optVal = converters(optNum).decode(options.slice(i, i+optLen))
+    console.log "option: #{optNum}", options.slice(i, i+optLen)
+    optVal = Converters.get(optNum).decode(options.slice(i, i+optLen))
     ret.options[optNum] = optVal
     i += optLen
 
-  ret
+  new Packet ret
 
-toBuffer = (data) ->
+toBuffer = () ->
   buffer = new Buffer 512, 'ascii'
   pos = 0
-  buffer[pos++] = data.op
-  buffer[pos++] = data.htype
-  buffer.writeUInt8 data.hlen, 2
-  buffer.writeUInt8 data.hops, 3
-  buffer.writeUInt32BE data.xid, 4
-  buffer.writeUInt16BE data.secs, 8
-  buffer.writeUInt16BE data.flags, 10
+  buffer[pos++] = @op
+  buffer[pos++] = @htype
+  buffer.writeUInt8 @hlen, 2
+  buffer.writeUInt8 @hops, 3
+  buffer.writeUInt32BE @xid, 4
+  buffer.writeUInt16BE @secs, 8
+  buffer.writeUInt16BE @flags, 10
   
   pos = 12
-  ["ciaddr", "yiaddr", "siaddr", "giaddr"].forEach (key) ->
-    (data[key] or "0.0.0.0").split(".").forEach (item) ->
-      buffer.writeUInt8 parseInt(item, 10), pos++
+  for key in ["ciaddr", "yiaddr", "siaddr", "giaddr"]
+    for octet in (@[key] or "0.0.0.0").split(".")
+      buffer.writeUInt8 parseInt(octet, 10), pos++
 
-  for hex in data.chaddr.split ':'
+  for hex in @chaddr.split ':'
     buffer[pos++] = parseInt hex, 16
   
   # fill bootp range with zeros
-  buffer.fill(0, pos, 235)
+  buffer.fill 0, pos, 235
   
   # magic cookie
   pos = 236
@@ -63,9 +63,9 @@ toBuffer = (data) ->
   
   # dhcp options payload starts at byte 240
   pos = 240
-  for opt of data.options
-    value = data.options[opt]
-    pos = converters(opt).encode(buffer, opt, value, pos)
+  for opt of @options
+    value = @options[opt]
+    pos = Converters.get(opt).encode(buffer, opt, value, pos)
   
   # mark the packet's end with 0xff
   buffer[pos] = 255
@@ -78,10 +78,11 @@ toBuffer = (data) ->
 
 class Packet
   @fromBuffer: fromBuffer
-  toBuffer: toBuffer
+
   constructor: (array) ->
     @[key] = array[key] for key of array
 
+  toBuffer: toBuffer
   op:       (@op)     -> this
   htype:    (@htype)  -> this
   hlen:     (@hlen)   -> this

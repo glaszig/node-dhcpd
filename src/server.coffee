@@ -2,7 +2,7 @@ util = require 'util'
 dhcp = require './index'
 {Socket} = require 'dgram'
 
-class Server extends Socket
+class DHCPServer extends Socket
 	constructor: ->
 		super
 
@@ -29,7 +29,7 @@ class Server extends Socket
 		res
 
 	_send: (event_name, ip, packet) ->
-		buffer = dhcp.Packet.toBuffer packet
+		buffer = packet.toBuffer()
 		util.log "Sending #{dhcp.MessageTypes[packet.options[53]]}" +
 		  " to #{ip}:68 (#{packet.chaddr})" +
 		  " with packet length of #{buffer.length} bytes"
@@ -86,6 +86,6 @@ class Server extends Socket
 
 module.exports = 
 	createServer: (type) ->
-		new Server type
-	Server: Server
+		new DHCPServer type
+	Server: DHCPServer
 	Packet: dhcp.Packet

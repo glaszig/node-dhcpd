@@ -134,9 +134,16 @@ module.exports =
       s.push sprintf("%02d", buf[j])
       j++
     s.join ":"
+    
+  readIp: (buffer, offset = 0) ->
+    if 0 == buffer.readUInt8 offset
+      undefined
+    else
+      stop = offset + 4
+      (buffer.readUInt8(offset++) while offset < stop).join '.'
 
-  readIp: (buf) ->
-    sprintf "%d.%d.%d.%d", buf[0], buf[1], buf[2], buf[3]
+  readMacAddress: (buffer) ->
+    ((byte + 0x100).toString(16).substr(-2) for byte in buffer).join ':'
 
   writeTimeOffset: (buf, num, offsetHours, offset) ->
     
