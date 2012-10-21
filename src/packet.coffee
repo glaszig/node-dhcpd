@@ -28,7 +28,6 @@ fromBuffer = (b) ->
   while i < options.length and options[i] != 255
     optNum = parseInt options[i++], 10
     optLen = parseInt options[i++], 10
-    console.log "option: #{optNum}", options.slice(i, i+optLen)
     optVal = Converters.get(optNum).decode(options.slice(i, i+optLen))
     ret.options[optNum] = optVal
     i += optLen

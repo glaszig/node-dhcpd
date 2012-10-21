@@ -12,8 +12,13 @@ The object signature for each converter must be:
 ###
 
 stub =
-  encode: (buf, num, value, offset) -> offset
-  decode: (buf) -> null
+  encode: (buf, num, value, offset) ->
+		console.error "[node-dhcpd] encoder for option #{num} not found"
+		offset
+  decode: (buf) ->
+		console.error "[node-dhcpd] decoder for option #{num} not found"
+		console.log "  buffer:", buf
+		null
 
 converters = []
 
@@ -23,7 +28,6 @@ getConverter = (i) ->
 			converters[i] = require "#{__dirname}/converters/#{i}"
 			console.info "[node-dhcpd] converter for option #{i} loaded"
 		catch e
-			console.error "[node-dhcpd] converter for option #{i} not found"
 			return stub
 	converters[i]
 
