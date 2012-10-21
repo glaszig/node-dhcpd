@@ -13,29 +13,29 @@ The object signature for each converter must be:
 
 stub =
   encode: (buf, num, value, offset) ->
-		console.error "[node-dhcpd] encoder for option #{num} not found"
-		offset
+    console.error "[node-dhcpd] encoder for option #{num} not found"
+    offset
   decode: (buf) ->
-		console.error "[node-dhcpd] decoder for option #{num} not found"
-		console.log "  buffer:", buf
-		null
+    console.error "[node-dhcpd] decoder for option #{num} not found"
+    console.log "  buffer:", buf
+    null
 
 converters = []
 
 getConverter = (i) ->
-	unless converters[i]
-		try
-			converters[i] = require "#{__dirname}/converters/#{i}"
-			console.info "[node-dhcpd] converter for option #{i} loaded"
-		catch e
-			return stub
-	converters[i]
+  unless converters[i]
+    try
+      converters[i] = require "#{__dirname}/converters/#{i}"
+      console.info "[node-dhcpd] converter for option #{i} loaded"
+    catch e
+      return stub
+  converters[i]
 
 registerConverter = (i, obj) ->
-	converters[i] = obj
+  converters[i] = obj
 
 class Converters
-	@get: getConverter
-	@register: registerConverter
+  @get: getConverter
+  @register: registerConverter
 
 module.exports = Converters
