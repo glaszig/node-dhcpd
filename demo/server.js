@@ -1,4 +1,5 @@
-var dhcp = require('./../lib'),
+var fs = require('fs'),
+    dhcp = require('./../lib/server'),
     util = require('util'),
     server = dhcp.createServer('udp4'),
     sqlite3 = require('sqlite3').verbose(),
@@ -22,11 +23,11 @@ Object.defineProperty(Object.prototype, "extend", {
 var config = {
   "leaseTime": 36400,
   "subnets": [{
-    "range": ["192.168.11.10", "192.168.11.20"],
+    "range": ["192.168.56.10", "192.168.56.20"],
     "subnetMask": "255.255.255.0",
-    "routers": ["192.168.11.1", "10.10.10.1"],
-    "nameServers": ["192.168.11.1", "10.10.10.1", "10.10.20.1"],
-    "broadcast": "192.168.11.255"
+    "routers": ["192.168.56.1", "10.10.10.1"],
+    "nameServers": ["192.168.56.1", "10.10.10.1", "10.10.20.1"],
+    "broadcast": "192.168.56.255"
   }]
 };
 
@@ -69,7 +70,7 @@ var randomIpInRange = function(range) {
   return range[0].replace(/\d+$/, lastByte);
 }
 
-console.log(findSubnetForIp('192.168.11.10'));
+console.log(findSubnetForIp('192.168.56.10'));
 
 db.serialize(function() {
   db.run('CREATE TABLE requests ('+
@@ -79,6 +80,14 @@ db.serialize(function() {
     'created_at text,'+
     'primary key (xid)'+
   ')');
+});
+
+server.on('message', function(data) {
+  console.log('-- foo --');
+  console.log(data);
+  fs.writeFileSync(__dirname + '/log/request.bin', data);
+  var buf = fs.readFileSync(__dirname + '/log/request.bin');
+  console.log(buf);
 });
 
 server.on('discover', function(packet, ip) {
@@ -213,4 +222,4 @@ server.on("listening", function () {
       address.address + ":" + address.port);
 });
 
-server.bind(67);
+server.bind(67, process.argv[2]);
