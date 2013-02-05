@@ -1,5 +1,5 @@
 {
-  "name": "dhcp",
+  "name": "node-dhcpd",
   "description": "A DHCP server for nodejs.",
   "version": "0.0.1",
   "author": "glaszig <glaszig@gmail.com>",
