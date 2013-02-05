@@ -135,7 +135,7 @@ server.on('request', function(packet, ip) {
     db.get('SELECT ip_address FROM requests WHERE xid = ?', packet.xid, function(err, row) {
       // found a matching offer, send ack
       if (row) {
-        util.log('  found offered ip for xid ' + packet.xid);
+        util.log('  found offered ip ' + row.ip_address + ' for xid ' + packet.xid);
         var subnet = findSubnetForIp(row.ip_address),
             params = {
               yiaddr: row.ip_address,
