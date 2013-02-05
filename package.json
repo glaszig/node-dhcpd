@@ -1,6 +1,6 @@
 {
   "name": "node-dhcpd",
-  "description": "A DHCP server for nodejs.",
+  "description": "A DHCP (server) implementation purely written in JavaScript with node.js",
   "version": "0.0.1",
   "author": "glaszig <glaszig@gmail.com>",
   "keywords": ["dhcp"],
