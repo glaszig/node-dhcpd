@@ -3,6 +3,9 @@
   "description": "A DHCP (server) implementation purely written in JavaScript with node.js",
   "version": "0.0.1",
   "author": "glaszig <glaszig@gmail.com>",
+  "contributors": [
+    { "name": "Scott McWhirter", "email": "scott@cloudtone.ca", "url": "http://github.com/cloudtone" }
+  ],
   "keywords": ["dhcp"],
   "main": "./lib/server",
   "engines": { "node": ">= 0.8.0" },
