@@ -2,8 +2,6 @@
 
 A DHCP (server) implementation purely written in JavaScript.
 
-> This is a proof of concept which basically works but needs more polishing.
-
 ## Requirements
 
 node.js 0.8.x
@@ -16,10 +14,10 @@ Clone this into your `node_modules` folder.
 
 ```js
 var dhcpd = require('node-dhcpd');
-var server = dhcpd.createServer('udp4');
+var server = new dhcpd('udp4', { broadcast: '192.168.0.255' });
 ```
 
-For an example see `demo/server.js`.
+For a real-world example have a look at [@konobi's forge](https://github.com/konobi/forge/).
 
 ## Contributing
 
