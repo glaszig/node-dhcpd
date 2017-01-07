@@ -4,15 +4,13 @@
   "version": "0.0.1",
   "author": "glaszig <glaszig@gmail.com>",
   "contributors": [
-    { "name": "Scott McWhirter", "email": "scott@cloudtone.ca", "url": "http://github.com/cloudtone" }
+    { "name": "Scott McWhirter", "email": "scott@cloudtone.ca", "url": "http://github.com/cloudtone" },
+    { "name": "Tino Ruge", "email": "admin@tionsys.de", "url": "https://tionsys.de/" }
   ],
   "keywords": ["dhcp"],
   "main": "./lib/server",
-  "engines": { "node": ">= 0.8.0" },
+  "engines": { "node": ">= 5.1" },
   "dependencies": {
     "sprintf": ">= 0.1.1"
-  },
-  "devDependencies": {
-    "sqlite3": "= 2.1.5"
   }
 }
