@@ -1,3 +1,6 @@
+> **ARCHIVED**  
+> activity on this library has stalled for quite some time and i won't update it any further. for other/up-to-date/better implementations have a look at [infusion/node-dhcp](https://github.com/infusion/node-dhcp) or [konobi/node-dhcpjs](https://github.com/konobi/node-dhcpjs) and [apaprocki/node-dhcpjs](https://github.com/apaprocki/node-dhcpjs).
+
 # Node.js DHCP server
 
 A DHCP (server) implementation purely written in JavaScript.
